@@ -126,8 +126,9 @@ async def play(ctx,msg):
     # if playerHandler.voice_client.is_playing():
     #     playerHandler.add_song(info)
     #     await ctx.send(f"{info['title']} is added to Queue")
-    
-    bot.loop.create_task(playerHandler.player_loop())
+    if not playerHandler.f:
+        bot.loop.create_task(playerHandler.player_loop())
+        playerHandler.f=True
 
 
 @bot.slash_command(name='pause',description='Pause the current playing song')
@@ -185,12 +186,26 @@ async def stop(ctx):
     else:
         await ctx.send("No Song is Playing")
 
+@bot.slash_command(name='disconnect',description='Disconnects from the Voice Channel')
+async def disconnect(ctx):
+
+    await ctx.respond('Command Success')
+
+    if playerHandler.voice_client:
+        await playerHandler.voice_client.disconnect()
+    else:
+        await ctx.send("I am not connected to a voice channel in this server.")
+
 @bot.slash_command(name='queue',description='Displays the Queue')
 async def queue(ctx):
     
     await ctx.respond('Command Success')
 
-    await ctx.send(playerHandler.queue)
+    embed = discord.Embed(title="Music Queue", description="List of songs in the queue:",color=discord.Color.red())
+    for i, song in enumerate(playerHandler.queue):
+        embed.add_field(name=f"Song {i+1}: ", value=song['title'], inline=True)
+
+    await ctx.send(embed=embed)
     
 
 @bot.event

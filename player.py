@@ -13,6 +13,7 @@ class player:
         self.voice_client = vc
         self.ctx=None
         self.source=None
+        self.f=False
     
     def add_song(self,source):
         self.queue.append(source)
