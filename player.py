@@ -1,3 +1,4 @@
+import csv
 from time import localtime, strftime
 import asyncio
 from collections import deque
@@ -39,6 +40,15 @@ class player:
         self.curr=None
         self.source=None
     
+    def write_data(self,duration,author):
+
+        with open("user_song_data.csv", "a",newline='') as f:
+            writer = csv.writer(f)
+            line=[f"{strftime('%Y-%m-%d %H:%M:%S',localtime()) }", self.curr['title'], self.curr['uploader'],f'{ duration /60:0>2.0f}:{duration%60:0>2.0f}',author]
+            writer.writerow(line)
+            print(line)
+
+            
     async def play_song(self,ctx,author):
         
         self.ctx=ctx
@@ -53,12 +63,13 @@ class player:
         embeds.add_field(name='Duration',value=f'{ duration /60:0>2.0f}:{duration%60:0>2.0f}',inline=True)
         embeds.add_field(name='Artist',value=self.curr['uploader'],inline=True)
         embeds.set_thumbnail(url=self.curr['thumbnail'])
-        embeds.set_footer(text=f"{strftime('%H:%M:%S',localtime()) }")
+        embeds.set_footer(text=f"{strftime('%Y-%m-%d %H:%M:%S',localtime()) }")
         
         msg=await ctx.send(embed=embeds)
         for i in emoji_list.values():
             await msg.add_reaction(i)
         
+        self.write_data(duration,author)
     
     async def play_next_song(self,ctx,author):
         self.ctx=ctx
