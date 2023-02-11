@@ -15,9 +15,12 @@ class player:
         self.ctx=None
         self.source=None
         self.f=False
+        self.author=None
     
     def add_song(self,source):
         self.queue.append(source)
+        self.write_data(source)
+
         
     
     def get_song(self):
@@ -40,26 +43,30 @@ class player:
         self.curr=None
         self.source=None
     
-    def write_data(self,duration,author):
+    def write_data(self,source):
 
-        with open("user_song_data.csv", "a",newline='') as f:
+        duration=source['duration']
+        with open("user_song_data.csv", "a",newline='',encoding='utf8') as f:
             writer = csv.writer(f)
-            line=[f"{strftime('%Y-%m-%d %H:%M:%S',localtime()) }", self.curr['title'], self.curr['uploader'],f'{ duration /60:0>2.0f}:{duration%60:0>2.0f}',author]
+            line=[f"{strftime('%Y-%m-%d %H:%M:%S',localtime()) }", source['title'], source['uploader'],f'{ duration /60:0>2.0f}:{duration%60:0>2.0f}',self.author]
             writer.writerow(line)
             print(line)
 
             
-    async def play_song(self,ctx,author):
+    async def play_song(self,ctx):
         
         self.ctx=ctx
 
         self.source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(self.curr['url']))
+        if not playerHandler.voice_client.is_connected():
+            await playerHandler.voice_client.connect(reconnect=True,timeout=60)
+
         playerHandler.voice_client.play(self.source)
         self.source.volume=0.75
 
         duration=self.curr['duration']
         embeds=discord.Embed(title="Now Playing",description=self.curr['title'],color=discord.Color.red())
-        embeds.add_field(name='Requested by',value=author,inline=True)
+        embeds.add_field(name='Requested by',value=self.author,inline=True)
         embeds.add_field(name='Duration',value=f'{ duration /60:0>2.0f}:{duration%60:0>2.0f}',inline=True)
         embeds.add_field(name='Artist',value=self.curr['uploader'],inline=True)
         embeds.set_thumbnail(url=self.curr['thumbnail'])
@@ -69,28 +76,28 @@ class player:
         for i in emoji_list.values():
             await msg.add_reaction(i)
         
-        self.write_data(duration,author)
+        # self.write_data(duration,author)
     
-    async def play_next_song(self,ctx,author):
+    async def play_next_song(self,ctx):
         self.ctx=ctx
         f=self.get_song()
         if not f:
             await ctx.send('Queue is empty!')
             return 0
         playerHandler.voice_client.stop()
-        await self.play_song(ctx,author)
+        await self.play_song(ctx)
         return 1
         # await ctx.send("Playing Next Song")
         
 
-    async def play_prev_song(self,ctx,author):
+    async def play_prev_song(self,ctx):
         self.ctx=ctx
         f=self.get_prev_song()
         if not f:
             await ctx.send('No Previous Song!')
             return
         playerHandler.voice_client.stop()
-        await self.play_song(ctx,author)
+        await self.play_song(ctx)
         # await ctx.send("Playing Previous Song")
     
     async def player_loop(self):
@@ -100,7 +107,7 @@ class player:
             if self.voice_client.is_playing() or self.voice_client.is_paused():
                 await asyncio.sleep(3)
             else:
-                f=await self.play_next_song(self.ctx,self.ctx.author)
+                f=await self.play_next_song(self.ctx)
                 if not f:
                     return
                 await asyncio.sleep(3)

@@ -10,15 +10,15 @@ bot = discord.Bot()
 async def on_ready():
     print("bot ready")
 
-@bot.event
-async def on_application_command_error(ctx: discord.ApplicationContext, error: discord.DiscordException):
+# @bot.event
+# async def on_application_command_error(ctx: discord.ApplicationContext, error: discord.DiscordException):
 
-    print(error)
-    if isinstance(error,Exception):
-        # await ctx.send('Please Connect to a Voice Channel')
-        print("Ignoring")
-    else:
-        print(error)
+#     print(error)
+#     if isinstance(error,Exception):
+#         # await ctx.send('Please Connect to a Voice Channel')
+#         print("Ignoring")
+#     else:
+#         print(error)
 
 
 @bot.slash_command(name='hello',description='Responds Hello')
@@ -37,8 +37,11 @@ async def play(ctx,msg):
 
     if not playerHandler.voice_client:
         playerHandler.voice_client = await ctx.author.voice.channel.connect()
+
+    if not playerHandler.voice_client.is_connected():
+        await playerHandler.voice_client.connect(reconnect=True,timeout=60)
     
-    
+    playerHandler.author=ctx.author
     
     link_type=get_link_type(msg)
 
@@ -51,13 +54,18 @@ async def play(ctx,msg):
         if '_type' in info and info['_type']=='playlist':
             playlist=info['entries']
             
-            playerHandler.add_song(playlist[0])
-            playerHandler.get_song()
-            await ctx.send(f"Playing {msg}")
-            await playerHandler.play_song(ctx,ctx.author)
+            if playerHandler.voice_client.is_playing():
+                playerHandler.add_song(playlist[0])
+            else:
+                playerHandler.add_song(playlist[0])
+                playerHandler.get_song()
+                await ctx.send(f"Playing {msg}")
+                await playerHandler.play_song(ctx)
 
             for i in playlist[1:]:
                 playerHandler.add_song(i)
+            
+            await ctx.send("Playlist Processing Done!")
             
         else:
             if playerHandler.voice_client.is_playing():
@@ -67,7 +75,7 @@ async def play(ctx,msg):
                 playerHandler.add_song(info)
                 playerHandler.get_song()
                 await ctx.send(f"Playing {msg}")
-                await playerHandler.play_song(ctx,ctx.author)
+                await playerHandler.play_song(ctx)
         
 
     elif link_type=='Spotify-Track' or link_type=='Song Name':
@@ -86,7 +94,7 @@ async def play(ctx,msg):
             playerHandler.add_song(info)
             playerHandler.get_song()
             await ctx.send(f"Playing {msg}")
-            await playerHandler.play_song(ctx,ctx.author)
+            await playerHandler.play_song(ctx)
     
     elif link_type=='Spotify-Playlist':
         sp_playlist=sp.playlist(msg)
@@ -97,15 +105,20 @@ async def play(ctx,msg):
         
         info = youtube_dl.YoutubeDL(ydl_opts).extract_info(f'ytsearch:{playlist[0]}', download=False)
         info = youtube_dl.YoutubeDL(ydl_opts).extract_info(f"https://youtu.be/{info['entries'][0]['id']}", download=False)
-        playerHandler.add_song(info)
-        playerHandler.get_song()
-        await ctx.send(f"Playing {msg}")
-        await playerHandler.play_song(ctx,ctx.author)
+        if playerHandler.voice_client.is_playing():
+                playerHandler.add_song(info)
+        else:
+            playerHandler.add_song(info)
+            playerHandler.get_song()
+            await ctx.send(f"Playing {msg}")
+            await playerHandler.play_song(ctx)
 
         for i in playlist[1:]:
             info = youtube_dl.YoutubeDL(ydl_opts).extract_info(f'ytsearch:{i}', download=False)
             info = youtube_dl.YoutubeDL(ydl_opts).extract_info(f"https://youtu.be/{info['entries'][0]['id']}", download=False)
             playerHandler.add_song(info)
+
+        await ctx.send("Playlist Processing Done!")
 
     else:
         await ctx.send(f"Invalid Link: {msg}")
@@ -120,7 +133,7 @@ async def play(ctx,msg):
     #         await ctx.send('Queue is empty!')
     #         return
     #     await ctx.send(f"Playing {msg}")
-    #     await playerHandler.play_song(ctx,ctx.author)
+    #     await playerHandler.play_song(ctx)
     #     return
     
     # if playerHandler.voice_client.is_playing():
@@ -149,7 +162,7 @@ async def next(ctx):
     await ctx.respond('Command Success')
 
     if playerHandler.voice_client:
-        await playerHandler.play_next_song(ctx,ctx.author)
+        await playerHandler.play_next_song(ctx)
         
 
 @bot.slash_command(name='previous',description='Plays the previous song')
@@ -158,7 +171,7 @@ async def previous(ctx):
     await ctx.respond('Command Success')
 
     if playerHandler.voice_client:
-        await playerHandler.play_prev_song(ctx,ctx.author)
+        await playerHandler.play_prev_song(ctx)
         
 
 @bot.slash_command(name='resume',description='Resumes the song')
@@ -235,7 +248,7 @@ async def on_reaction_add(reaction, user):
         elif reaction.emoji==emoji_list['prev']:
             print("Previous")
             if playerHandler.voice_client:
-                await playerHandler.play_prev_song(ctx,user)
+                await playerHandler.play_prev_song(ctx)
         
         elif reaction.emoji==emoji_list['stop']:
             print("Stop")
@@ -249,7 +262,7 @@ async def on_reaction_add(reaction, user):
         elif reaction.emoji==emoji_list['next']:
             print("Next")
             if playerHandler.voice_client:
-                await playerHandler.play_next_song(ctx,user)
+                await playerHandler.play_next_song(ctx)
         
         elif reaction.emoji==emoji_list['plus']:
 
