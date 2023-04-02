@@ -4,7 +4,7 @@ Vibez is a Discord music bot built using Python and the Discord API that allows 
 # Installation
 
 1. Clone this repository to your local machine.
-`git clone https://github.com/<your_username>/Vibez.git`
+`git clone https://github.com/Vignaraj-1018/VIBEZ-Music-Bot.git`
 
 2. Install the necessary packages using pip.
 `pip install -r requirements.txt`
